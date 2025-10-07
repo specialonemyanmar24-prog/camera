@@ -1,0 +1,236 @@
+<html lang="my">
+ <head> 
+  <meta charset="utf-8"> 
+  <meta name="viewport" content="width=device-width,initial-scale=1"> 
+  <title>Base64 → Image Decoder</title> 
+  <style>
+  :root{
+    --bg:#f5f6f8;
+    --card:#ffffff;
+    --accent:#111;
+    --muted:#777;
+    --btn:#0b0b0b;
+  }
+  body{
+    margin:0;
+    font-family: "Segoe UI", Roboto, "Noto Sans Myanmar", system-ui, sans-serif;
+    background:var(--bg);
+    color:var(--accent);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    min-height:100vh;
+  }
+
+  .card{
+    width:360px;
+    max-width:92vw;
+    background:var(--card);
+    border-radius:10px;
+    box-shadow:0 8px 30px rgba(10,10,10,0.08);
+    overflow:hidden;
+  }
+
+  .header{
+    padding:18px 18px 6px;
+    text-align:center;
+  }
+  .title{
+    font-size:20px;
+    font-weight:700;
+    margin:0;
+  }
+
+  .input-wrap{
+    padding:12px 18px 0;
+  }
+  textarea#b64{
+    width:100%;
+    min-height:14px;
+    max-height:140px;
+    resize:vertical;
+    border-radius:6px;
+    border:1px solid #e2e6ea;
+    padding:10px;
+    font-family:monospace;
+    font-size:13px;
+    box-sizing:border-box;
+  }
+
+  .image-area{
+    position:relative;
+    height:220px;
+    background:#111;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+
+  .image-area img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    filter:contrast(0.95) saturate(0.9);
+  }
+
+  .card-body{
+    padding:18px;
+    text-align:center;
+  }
+  .name{
+    font-size:22px;
+    font-weight:800;
+    margin:6px 0 4px;
+  }
+  .muted{
+    color:var(--muted);
+    font-size:13px;
+    margin-bottom:12px;
+  }
+
+  .decode-row{
+    display:flex;
+    gap:12px;
+    padding:0 18px 18px;
+  }
+  button{
+    flex:1;
+    background:var(--btn);
+    color:white;
+    border:0;
+    padding:12px 14px;
+    border-radius:8px;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 6px 14px rgba(11,11,11,0.12);
+  }
+  button:active{ transform:translateY(1px) }
+
+  .info{
+    padding:10px 18px;
+    color:var(--muted);
+    font-size:13px;
+    text-align:left;
+  }
+
+  .error{
+    color:#900;
+    font-size:13px;
+    padding:0 18px 12px;
+  }
+
+  @media (max-width:420px){
+    .image-area{ height:200px; }
+  }
+</style> 
+ </head> 
+ <body> 
+  <div class="card" role="main"> 
+   <div class="header"> 
+    <div class="title">
+      Camera Hacking 
+    </div> 
+   </div> 
+   <div class="input-wrap"> 
+    <textarea id="b64" placeholder="Enter Base64 Code.." aria-label="Base64 input"></textarea> 
+    <br> 
+    <br> 
+   </div> 
+   <div class="image-area" id="imageArea" aria-live="polite"> 
+    <img id="preview" src="https://media.tenor.com/Zp9f2I9FpFcAAAAM/anonimous-hacker.gif" alt="Decoded Image" style="width:100%">
+   </div> 
+   <div class="card-body"> 
+    <div class="name">
+      AK Phyoe 
+    </div> 
+    <div class="muted">
+      Software Service &amp; EthicalHacking — Version-1.0 
+    </div> 
+   </div> 
+   <div class="decode-row"> 
+    <button id="decodeBtn">Decode</button> 
+   </div> 
+   <div id="error" class="error" style="display:none"></div> 
+  </div> 
+  <script>
+(function(){
+  const ta = document.getElementById('b64');
+  const btn = document.getElementById('decodeBtn');
+  const preview = document.getElementById('preview');
+  const err = document.getElementById('error');
+
+  function showError(msg){
+    err.style.display = 'block';
+    err.textContent = msg;
+  }
+  function clearError(){
+    err.style.display = 'none';
+    err.textContent = '';
+  }
+
+  function detectMimeFromBase64(s){
+    // typical starts:
+    // PNG: iVBORw0KG...
+    // JPEG: /9j/...
+    // GIF: R0lGODlh...
+    if(s.startsWith('iVBOR')) return 'image/png';
+    if(s.startsWith('/9j/') || s.startsWith('/9j')) return 'image/jpeg';
+    if(s.startsWith('R0lGOD')) return 'image/gif';
+    // fallback
+    return 'image/png';
+  }
+
+  btn.addEventListener('click', function(){
+    clearError();
+    let input = ta.value || '';
+    input = input.trim();
+    if(!input){
+      showError('Base64 string မထည့်ထားပါ။');
+      preview.src = '';
+      return;
+    }
+
+    // remove whitespace/newlines inside base64 (safe)
+    // but if it's a data URL, we keep prefix
+    try{
+      let src = '';
+      if(input.startsWith('data:')){
+        // already data URL
+        src = input;
+      } else {
+        // clean whitespace/newlines
+        const cleaned = input.replace(/\\s+/g, '');
+        // detect MIME
+        const mime = detectMimeFromBase64(cleaned);
+        src = 'data:' + mime + ';base64,' + cleaned;
+      }
+
+      // assign to img
+      preview.src = src;
+
+      // simple onerror handler to detect invalid base64
+      preview.onerror = function(){
+        showError('ဤ Base64 သည် ပုံအဖြစ် ဖော်မထုတ်နိုင်ပါ — format သို့ အရွယ်အစားကြီးလွန်းနိုင်သည်။');
+        preview.src = '';
+      };
+
+      preview.onload = function(){
+        clearError();
+        // nothing else — image displayed
+      };
+    } catch(e){
+      console.error(e);
+      showError('Decode မှာ error ဖြစ်တယ်: ' + (e.message || e));
+      preview.src = '';
+    }
+  });
+
+  // optional: paste sample on long-press (developer convenience)
+  // ta.addEventListener('paste', ()=> setTimeout(()=>btn.click(), 200));
+})();
+</script> 
+ </body>
+</html>
